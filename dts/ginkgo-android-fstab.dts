@@ -1,0 +1,35 @@
+// Android DT overlay for ginkgo: firmware/android/fstab node.
+//
+// Stock Xiaomi DTBs carry a firmware/android/fstab node telling Android's
+// first-stage init how to mount the vendor partition (system is mounted by
+// the kernel itself via root=PARTUUID). Mainline DTBs do not — without this
+// node first-stage init has no fstab and Android never boots.
+//
+// The stock trinket DTB references UFS (4804000.ufshc); ginkgo uses eMMC
+// (4744000.sdhci), so the dev path is fixed here.
+/dts-v1/;
+/plugin/;
+
+&{/firmware} {
+	android {
+		compatible = "android,firmware";
+
+		vbmeta {
+			compatible = "android,vbmeta";
+			parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+		};
+
+		fstab {
+			compatible = "android,fstab";
+
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait,avb";
+				status = "ok";
+			};
+		};
+	};
+};

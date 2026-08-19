@@ -68,6 +68,7 @@ ANDROID=1 ./scripts/build-kernel.sh
 1. 从 `backup/ginkgo/cmdline.txt`（本机自己的 cmdline，`root=PARTUUID=54dc1022-…`）读出 **system 的 PARTUUID**——ginkgo 的内核直接把它当根文件系统挂载。
 2. 打包 `out/boot-android.img`（header v2）：**主线内核 + 主线 DTB**、**无 ramdisk**（ramdisk_size = 0），cmdline 为 `androidboot.hardware=qcom androidboot.bootdevice=4744000.sdhci androidboot.selinux=permissive … root=PARTUUID=<system> skip_initramfs rootwait ro init=/init`。
 3. PARTUUID 标识的是 `system` 这个**分区**——往里面刷 GSI 也不会变。
+4. 给 DTB 打上 **Android fstab DT overlay**（`dts/ginkgo-android-fstab.dts`）：原厂 ginkgo DTB 带 `firmware/android/fstab` 节点，一阶段 init 靠它挂 `vendor`——主线 DTB 没有，不打 overlay 的话 Android 永远起不来。overlay 里用的是 eMMC 路径（`4744000.sdhci`；原厂 trinket 参考 DTB 错指向了 UFS）。
 
 可用 `SYSTEM_PARTUUID=<uuid>` 覆盖。LineageOS 风格的启动（确实带一阶段 ramdisk + fstab）用 `RAMDISK_ANDROID=/path/ramdisk.cpio.gz`，脚本会自动去掉 `root=`/`skip_initramfs`，交给一阶段 init 挂 system。`ANDROID_ADD_FW=1` 可把 ginkgo GPU 固件 cpio 追加进该 ramdisk。
 

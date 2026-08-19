@@ -49,6 +49,21 @@ OS_PATCH_LEVEL=2022-01
 [[ -f "$KERNEL" ]] || { echo "missing $KERNEL — run scripts/build-kernel.sh first" >&2; exit 1; }
 [[ -f "$DTB" ]] || { echo "missing $DTB — run scripts/build-kernel.sh first" >&2; exit 1; }
 command -v mkbootimg >/dev/null || { echo "mkbootimg not found — run scripts/setup-deps.sh" >&2; exit 1; }
+command -v dtc >/dev/null || { echo "dtc not found — run scripts/setup-deps.sh" >&2; exit 1; }
+command -v fdtoverlay >/dev/null || { echo "fdtoverlay not found — run scripts/setup-deps.sh" >&2; exit 1; }
+
+# Apply the Android fstab DT overlay (firmware/android/fstab). Stock ginkgo
+# DTBs carry this node; mainline DTBs do not. Without it Android's first-
+# stage init cannot mount /vendor and the GSI never boots.
+ANDROID_FSTAB_DTS="${ANDROID_FSTAB_DTS:-$ROOT/dts/ginkgo-android-fstab.dts}"
+[[ -f "$ANDROID_FSTAB_DTS" ]] || { echo "missing android fstab overlay: $ANDROID_FSTAB_DTS" >&2; exit 1; }
+DTB_BASE="$TMP/dtb-syms.dtb"
+DTB_FINAL="$TMP/$DTB_NAME-android.dtb"
+echo "==> Applying Android fstab overlay to the DTB"
+dtc -@ -I dtb -O dtb -o "$DTB_BASE" "$DTB" 2>/dev/null
+dtc -@ -I dts -O dtb -o "$TMP/fstab.dtbo" "$ANDROID_FSTAB_DTS" 2>/dev/null
+fdtoverlay -i "$DTB_BASE" -o "$DTB_FINAL" "$TMP/fstab.dtbo"
+DTB="$DTB_FINAL"
 
 RAMDISK="${RAMDISK_ANDROID:-}"
 BOOT_CMDLINE="console=ttyMSM0,115200n8 androidboot.console=ttyMSM0 earlycon=msm_serial_dm,0x4a90000 keep_bootcon ignore_loglevel loglevel=8 clk_ignore_unused fw_devlink.sync_state=disabled androidboot.hardware=qcom androidboot.bootdevice=4744000.sdhci androidboot.fstab_suffix=emmc androidboot.configfs=true androidboot.usbcontroller=4e00000.dwc3 androidboot.selinux=permissive androidboot.verifiedbootstate=orange loop.max_part=7 buildvariant=userdebug"

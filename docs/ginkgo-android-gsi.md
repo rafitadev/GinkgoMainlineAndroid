@@ -68,6 +68,7 @@ The script reproduces the **Xiaomi system-as-root scheme** (this is what every g
 1. Reads the **system PARTUUID** from `backup/ginkgo/cmdline.txt` (the device's own cmdline, `root=PARTUUID=54dc1022-…`), where ginkgo's kernel mounts the `system` partition directly as the root filesystem.
 2. Packs `out/boot-android.img` as header v2: **mainline kernel + mainline DTB**, **no ramdisk** (ramdisk_size = 0), cmdline `androidboot.hardware=qcom androidboot.bootdevice=4744000.sdhci androidboot.selinux=permissive … root=PARTUUID=<system> skip_initramfs rootwait ro init=/init`.
 3. The PARTUUID identifies the `system` *partition* — it does not change when a GSI is flashed into it.
+4. Applies the **Android fstab DT overlay** (`dts/ginkgo-android-fstab.dts`) to the DTB: stock ginkgo DTBs carry a `firmware/android/fstab` node that first-stage init uses to mount `vendor` — mainline DTBs do not, so without this overlay Android never boots. The overlay uses the eMMC path (`4744000.sdhci`; the stock trinket reference DTB wrongly points at UFS).
 
 `SYSTEM_PARTUUID=<uuid>` overrides the default. For LineageOS-style boots (which DO ship a first-stage ramdisk + fstab), set `RAMDISK_ANDROID=/path/ramdisk.cpio.gz`; the script then drops `root=`/`skip_initramfs` and lets first-stage init mount system. `ANDROID_ADD_FW=1` appends the ginkgo GPU firmware cpio to that ramdisk.
 
