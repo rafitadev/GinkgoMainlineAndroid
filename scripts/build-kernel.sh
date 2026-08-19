@@ -25,12 +25,19 @@ if [[ ! -f "$KBUILD_OUTPUT/.config" ]]; then
 	make O="$KBUILD_OUTPUT" "$DEFCONFIG"
 fi
 
-if [[ -f "$FRAGMENT" ]]; then
-	echo "==> Merging ginkgo fragment"
+FRAGMENTS=("$FRAGMENT")
+if [[ "${ANDROID:-}" == "1" ]]; then
+	ANDROID_FRAGMENT="${ANDROID_FRAGMENT:-$ROOT/config/ginkgo-android.fragment}"
+	[[ -f "$ANDROID_FRAGMENT" ]] || die "android fragment missing at $ANDROID_FRAGMENT"
+	FRAGMENTS+=("$ANDROID_FRAGMENT")
+fi
+
+if [[ -n "${FRAGMENTS[0]:-}" && -f "${FRAGMENTS[0]}" ]]; then
+	echo "==> Merging fragments: ${FRAGMENTS[*]}"
 	FW_FRAG="$(mktemp)"
 	echo "CONFIG_EXTRA_FIRMWARE_DIR=\"$ROOT/firmware/ginkgo\"" > "$FW_FRAG"
 	"$KERNEL_SRC/scripts/kconfig/merge_config.sh" -m -O "$KBUILD_OUTPUT" \
-		"$KBUILD_OUTPUT/.config" "$FRAGMENT" "$FW_FRAG"
+		"$KBUILD_OUTPUT/.config" "${FRAGMENTS[@]}" "$FW_FRAG"
 	rm -f "$FW_FRAG"
 	make O="$KBUILD_OUTPUT" olddefconfig
 fi

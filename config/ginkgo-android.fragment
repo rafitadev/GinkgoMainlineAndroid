@@ -1,0 +1,95 @@
+# Ginkgo (SM6125) kernel config fragment — Android GSI support.
+# Applied AFTER config/ginkgo.fragment via merge_config.sh (enable with
+# ANDROID=1 ./scripts/build-kernel.sh). Turns the mainline kernel into one
+# that can boot an Android 17 GSI system image (system-as-root, non-dynamic
+# partitions on ginkgo: system + vendor are real eMMC partitions).
+#
+# Anything below that does not exist in this kernel is silently dropped by
+# olddefconfig, so it is safe to keep future-proof entries.
+
+# --- Binder IPC ---
+# Android 12+ talks to the binder driver over binderfs. ashmem was removed
+# from mainline long ago; modern Android uses memfd_create() instead.
+# (The old CONFIG_ANDROID umbrella no longer exists in 7.0 — the two
+# binder symbols below are the whole Android driver menu now.)
+CONFIG_ANDROID_BINDER_IPC=y
+CONFIG_ANDROID_BINDERFS=y
+CONFIG_MEMFD_CREATE=y
+
+# --- SELinux ---
+# Android init enforces SELinux; mainline boots it fine. Keep develop +
+# bootparam so the first GSI boot can be tested with `androidboot.selinux=permissive`
+# (or `enforcing=0`) before moving to enforcing.
+CONFIG_SECURITY_SELINUX=y
+CONFIG_SECURITY_SELINUX_DEVELOP=y
+CONFIG_SECURITY_SELINUX_AVC_STATS=y
+CONFIG_SECURITY_SELINUX_BOOTPARAM=y
+CONFIG_SECURITY_SELINUX_BOOTPARAM_VALUE=1
+
+# --- Cgroups / scheduling (GKI-required) ---
+# uclamp replaces downstream schedtune; PSI and cgroup BPF are checked by
+# Google's GKI config checker.
+CONFIG_CGROUP_BPF=y
+CONFIG_UCLAMP_TASK=y
+CONFIG_UCLAMP_TASK_GROUP=y
+CONFIG_PSI=y
+# CONFIG_PSI_DEFAULT_DISABLED is not set
+
+# --- Storage: Android partition layout ---
+# GSI system images ship as erofs (ext4 also supported), userdata is
+# formatted f2fs by Android 17, and old vendor partitions use squashfs.
+CONFIG_EROFS_FS=y
+CONFIG_F2FS_FS=y
+CONFIG_F2FS_FS_XATTR=y
+CONFIG_F2FS_FS_SECURITY=y
+CONFIG_F2FS_FS_POSIX_ACL=y
+CONFIG_QUOTA=y
+CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_XZ=y
+CONFIG_SQUASHFS_ZSTD=y
+CONFIG_EXT4_FS_SECURITY=y
+CONFIG_EXT4_FS_POSIX_ACL=y
+CONFIG_TMPFS_XATTR=y
+CONFIG_TMPFS_POSIX_ACL=y
+
+# --- File-based encryption (FBE) ---
+# Android 11+ userdata is FBE with metadata encryption (dm-crypt over the
+# f2fs block device). fs-verity is used for APEX verification on Android 12+.
+CONFIG_FS_ENCRYPTION=y
+CONFIG_FS_VERITY=y
+# DM must be built-in: Android 11+ userdata uses metadata encryption
+# (dm-crypt) at first boot, and the device ships no /lib/modules.
+CONFIG_BLK_DEV_DM=y
+CONFIG_DM_CRYPT=y
+CONFIG_DM_VERITY=y
+CONFIG_ENCRYPTED_KEYS=y
+CONFIG_CRYPTO_AES=y
+CONFIG_CRYPTO_XTS=y
+CONFIG_CRYPTO_CTS=y
+CONFIG_CRYPTO_CBC=y
+CONFIG_CRYPTO_ESSIV=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_SHA512=y
+CONFIG_CRYPTO_GHASH=y
+
+# --- Boot / initramfs ---
+# Android boots from a ramdisk (cpio) inside boot.img — ginkgo uses a
+# gzip one, but newer vendor_boot (header v4) images compress with lz4/lzo.
+# bootconfig may be appended after the ramdisk on header v4 boot images.
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_RD_GZIP=y
+CONFIG_RD_LZ4=y
+CONFIG_RD_LZO=y
+CONFIG_RD_XZ=y
+CONFIG_RD_ZSTD=y
+CONFIG_BOOT_CONFIG=y
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+
+# --- Misc GKI-required / Android runtime bits ---
+CONFIG_RANDOM_TRUST_CPU=y
+CONFIG_DMABUF_HEAPS=y
+CONFIG_DMABUF_HEAPS_SYSTEM=y
+CONFIG_ZRAM=y
+CONFIG_HID=y
+CONFIG_USB_HID=y
