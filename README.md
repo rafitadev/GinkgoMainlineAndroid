@@ -119,6 +119,11 @@ See `scripts/env.sh`:
 | `JOBS` | `nproc` | Parallel jobs |
 | `GINKGO_ROOT_PASSWORD` | *(unset)* | Root password for the image; otherwise read from the overlay file |
 
+## Contributors
+
+- **rafitadev** — maintainer, kernel build, releases
+- **Huabin1010** — contributions to the imported reference material
+
 ## License
 
 Build scripts and original documentation in this repository are [GPL-2.0-only](LICENSE), same as the Linux kernel. Downstream excerpts under `reference/` keep their upstream licenses. Device firmware blobs are proprietary; they are provided only for running Linux on the device they were extracted from.
